@@ -1,0 +1,112 @@
+package com.telusko.SpringAIDemo;
+
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.memory.MessageWindowChatMemory;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
+
+@RestController
+public class AIController {
+
+    private ChatClient chatClient;
+    private ChatMemory  memory = MessageWindowChatMemory.builder().build();
+
+      /* For Gemini */
+//    @Autowired
+//    @Qualifier("googleGenAiTextEmbedding")
+//    private EmbeddingModel embeddingModel;
+
+    /* For OpenAI */
+    @Autowired
+    @Qualifier("openAiEmbeddingModel")
+    private EmbeddingModel embeddingModel;
+
+    public AIController(ChatClient.Builder builder) {
+        this.chatClient = builder
+                .defaultAdvisors(MessageChatMemoryAdvisor.builder(memory).build())
+                .build();
+    }
+
+
+    @GetMapping("/api/{message}")
+    public String home(@PathVariable String message) {
+        ChatResponse response = chatClient
+                .prompt(message)
+                .call()
+                .chatResponse();
+                //.content();
+
+        String result = response.getResult().getOutput().getText();
+
+        System.out.println(response.getMetadata());
+        System.out.println(response.getMetadata().getUsage().getTotalTokens());
+
+        return result;
+    }
+
+
+    @GetMapping("/api/movie")
+    public String getMovie(@RequestParam String type, @RequestParam String year, @RequestParam String lang){
+
+        String tempt = """
+                I want to watch a {type} movie with a good rating,
+                  released around {year} in {lang} language,
+                  suggest one specific movie and tell me the cast and length of the movie.
+                
+                response format should be:
+                Movie name: <name>
+                Cast: <cast>
+                Length: <length>
+                IMDB rating: <rating>
+                Basic Plot: <plot>
+                """;
+
+        PromptTemplate template = PromptTemplate.builder()
+                .template(tempt)
+                .build();
+
+        Prompt prompt = template.create(Map.of("type", type, "year", year, "lang", lang));
+
+        String result = chatClient
+                .prompt(prompt)
+                .call()
+                .content();
+
+        return result;
+    }
+
+    @GetMapping("/api/embedding")
+    public float[] getVector(@RequestParam String text){
+
+       return embeddingModel.embed(text);
+    }
+
+    @GetMapping("/api/similarity")
+    public double cosineSimilarity(@RequestParam String text1, @RequestParam String text2){
+
+        float[] embed1 = embeddingModel.embed(text1);
+        float[] embed2 = embeddingModel.embed(text2);
+
+        double dotProduct = 0.0;
+        double normA = 0.0;
+        double normB = 0.0;
+        for (int i = 0; i < embed1.length; i++) {
+            dotProduct += embed1[i] * embed2[i];
+            normA += Math.pow(embed1[i], 2);
+            normB += Math.pow(embed2[i], 2);
+        }
+        return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB)) * 100;
+    }
+}
