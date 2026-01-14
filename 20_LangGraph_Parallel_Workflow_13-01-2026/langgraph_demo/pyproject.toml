@@ -1,0 +1,13 @@
+[project]
+name = "20-langgraph-parallel-workflow-13-01-2026"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "dotenv>=0.9.9",
+    "langchain-openai>=1.1.7",
+    "langgraph>=1.0.6",
+    "pydantic>=2.12.5",
+    "typing>=3.10.0.0",
+]
