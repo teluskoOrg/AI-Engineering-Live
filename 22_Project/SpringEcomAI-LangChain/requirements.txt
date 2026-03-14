@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+python-multipart
+langchain
+langchain-openai
+langchain-chroma
+chromadb
+openai
+python-dotenv
+requests
+pydantic
